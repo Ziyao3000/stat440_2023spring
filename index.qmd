@@ -1,0 +1,31 @@
+---
+title: "Template Quarto Document"
+author: "Author Name"
+title-block-banner: true
+title-block-style: default
+format: html
+# format: pdf
+---
+
+
+This is a template quarto document.
+
+This is an `R` cell
+
+```{R}
+#| fig-subcap: "This is the figure subcaption"
+#| fig-align: "center"
+#| fig-cap-location: top
+
+renv::activate()
+library(dplyr)
+x <- rnorm(100)
+x %>% 
+list(data=., mean=mean(.), sd=sd(.))
+```
+
+And this is a $\TeX$ block
+
+$$
+\bar{X} = \frac{1}{n} \sum_{i=1}^{n} X_i
+$$
