@@ -1,0 +1,115 @@
+---
+title: "Homework 18"
+author: "Ziyao Yang"
+date: "April, 7, 2023"
+format: pdf
+geometry: 
+  - top=30mm
+  - left=20mm
+editor: visual
+---
+
+# \[A\] Suppose $X$ is a discrete random variable with the following PMF: $f(x) = \frac{2 + \theta(2 - x)}{6}$, for $x = 1, 2, 3$, where the unknown parameter $\theta \in {-1, 0, 1}$. Suppose a random sample is observed in this distribution: $X_1 = 3$, $X_2 = 2$, $X_3 = 3$, $X_4 = 1$. Find the maximum likelihood estimate of $\theta$ based on these observations.
+
+```{r}
+f <- function(theta, x){
+  (2 + theta *(2-x))/6
+}
+
+theta = -1
+f(theta,3)*f(theta,2)*f(theta,3)*f(theta,1)
+
+theta = 0
+f(theta,3)*f(theta,2)*f(theta,3)*f(theta,1)
+
+theta = 1
+f(theta,3)*f(theta,2)*f(theta,3)*f(theta,1)
+```
+
+```{r}
+pmf <- function(x, theta) {
+  return((2 + theta * (2 - x)) / 6)
+}
+
+likelihood <- function(theta) {
+  return(pmf(3, theta) * pmf(2, theta) * pmf(3, theta) * pmf(1, theta))
+}
+theta_values <- c(-1, 0, 1)
+likelihood_values <- sapply(theta_values, likelihood)
+
+likelihood_values
+theta_mle <- theta_values[which.max(likelihood_values)]
+theta_mle
+```
+
+# \[A\] Let independent random samples $X_{1j}, \dots, X_{nj}$, each of size $n$, be taken from the $k$ normal distributions with means $\mu_j = c + d[j - (k + 1)/2]$, $j = 1, \dots, k$, respectively, and common known variance $\sigma^2$. Find the maximum likelihood estimators of $c$ and $d$, where both $c$ and $d$ are unconstrained unknown constants.
+
+```{r}
+f <- function(sigma, c, d, x, k, j){
+  (1/sqrt(2*pi*sigma^2)) * exp(-(x - (c + d * (j - (k + 1)/2)))^2 / (2 * sigma^2))
+}
+```
+
+```{r}
+likelihood <- function(sigma, c, d, x, k, n) {
+  L <- 1
+  for (j in 1:k) {
+    for (i in 1:n) {
+      L <- L * f(sigma, c, d, x[[j]][i], k, j)
+    }
+  }
+  return(L)
+}
+```
+
+```{r}
+log_likelihood <- function(sigma, c, d, x, k, n) {
+  l <- 0
+  for (j in 1:k) {
+    for (i in 1:n) {
+      l <- l + log(f(sigma, c, d, x[[j]][i], k, j))
+    }
+  }
+  return(l)
+}
+```
+
+```{r}
+log_likelihood_partial_c <- function(sigma, c, d, x, k, n) {
+  partial_c <- 0
+  for (j in 1:k) {
+    for (i in 1:n) {
+      partial_c <- partial_c + (x[[j]][i] - c - d * (j - (k + 1) / 2)) / sigma^2
+    }
+  }
+  return(partial_c)
+}
+
+log_likelihood_partial_d <- function(sigma, c, d, x, k, n) {
+  partial_d <- 0
+  for (j in 1:k) {
+    for (i in 1:n) {
+      partial_d <- partial_d + (x[[j]][i] - c - d * (j - (k + 1) / 2)) * (j - (k + 1) / 2) / sigma^2
+    }
+  }
+  return(partial_d)
+}
+```
+
+```{r}
+# Define your log-likelihood expression
+# Replace x_ij, sigma, k with your specific values or symbols
+log_likelihood_expr <- expression(sum(sum((x_ij - c - d * (j - (k + 1)/2))^2) / (2 * sigma^2)))
+
+# Find the partial derivatives with respect to c and d
+partial_c <- deriv(log_likelihood_expr, "c")
+partial_d <- deriv(log_likelihood_expr, "d")
+
+# Print the partial derivatives
+cat("Partial derivative with respect to c:\n")
+print(partial_c)
+
+cat("\nPartial derivative with respect to d:\n")
+print(partial_d)
+
+```

@@ -1,0 +1,131 @@
+---
+title: "Homework 16"
+author: "Ziyao Yang"
+date: "March, 26, 2023"
+format: pdf
+geometry: 
+  - top=30mm
+  - left=20mm
+editor: visual
+---
+
+```{r}
+rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
+gc() #free up memrory and report the memory usage.
+library(readr)
+regression_example <- read_csv("regression_example.csv")
+
+x <- regression_example$x
+y <- regression_example$y
+plot(x,y)
+
+lm <- lm(y~x-1,regression_example)
+summary(lm)
+
+# Frequentist estimate of beta
+beta_hat = sum((x - mean(x)) * (y - mean(y))) / sum((x - mean(x))^2)
+
+# Frequentist estimate of sigma squared
+sigma2_hat = sum((y - beta_hat * x)^2) / (length(y) - 1)
+
+```
+
+{{< pagebreak >}} :::{.callout-note} \# \[A\] & \[C\] Using your expression from the previous part, proposals of the following form: - $\beta → \beta + Unif(−.2, .2)$ - $\sigma^2 → \sigma^2 + Unif(−.1, .1)$
+
+And the starting position $\beta_0 = 2$, $\sigma^2_0 = 2$, first derive a Metropolis Hastings algorithm to approximate the posterior distribution $\beta, \sigma^2 | Y_1,\dots,Y_n$, and then write codes to simulate a Markov chain of length 10,000 using this algorithm. Use `set.seed(440)` in your simulations. :::
+
+```{r}
+#initialize MH
+beta0 = 2
+sigma02 = 2
+
+# Likelihood function on the log scale
+likelihood = function(param){
+  beta = param[1]
+  var = param[2]
+  pred = beta*x
+  singlelikelihoods = dnorm(y, mean = pred, sd = sqrt(var), log = T)
+  sumll = sum(singlelikelihoods)
+  return(sumll)
+}
+
+# Prior distribution on the log scale
+prior = function(param){
+  beta = param[1]
+  var = param[2]
+  bprior = dnorm(beta, sd = sqrt(var), log = T)
+  sdprior = log(1/var)
+  return(bprior+sdprior)
+}
+
+# Posterior distribution on the log scale
+posterior = function(param){
+  return (likelihood(param) + prior(param))
+}
+
+proposalfunction = function(param){
+  return(param + runif(2,c(-0.2,-0.1), c(0.2,0.1)))
+}
+
+run_metropolis_MCMC = function(startvalue, iterations){
+  chain = array(dim = c(iterations+1,2))
+  chain[1,] = startvalue
+  for (i in 1:iterations){
+    proposal = proposalfunction(chain[i,])
+    probab = exp(posterior(proposal) - posterior(chain[i,]))
+    if (runif(1) < probab){
+      chain[i+1,] = proposal
+    }else{
+      chain[i+1,] = chain[i,]
+    }
+  }
+  return(chain)
+}
+
+set.seed(440)
+startvalue = c(beta0,sigma02)
+chain = run_metropolis_MCMC(startvalue, 100000)
+
+burnIn = 5000
+beta_samples = chain[-(1:burnIn),1]
+sigma_samples = chain[-(1:burnIn),2]
+```
+
+{{< pagebreak >}} :::{.callout-note} \# \[C\] Plot the histograms of your simulated posterior samples for β and σ2 as two separate plots. Add a vertical line on each plot to indicate the frequentist estimates $\hat{\beta}$ and $\hat{\sigma^2}$
+
+```{r}
+# Plot the histogram of beta with the frequentist estimate
+hist(beta_samples, 
+     breaks = 50, 
+     main = expression("Posterior samples for " * beta), 
+     xlab = expression(beta), 
+     col = "lightblue", 
+     border = "black")
+abline(v = beta_hat, col = "red", lwd = 2, lty = 2)
+
+# Plot the histogram of sigma^2 with the frequentist estimate
+hist(sigma_samples, 
+     breaks = 50, 
+     main = expression("Posterior samples for " * sigma^2), 
+     xlab = expression(sigma^2), 
+     col = "lightblue", 
+     border = "black")
+abline(v = sigma2_hat, col = "red", lwd = 2, lty = 2)
+```
+
+::: {{< pagebreak >}} :::{.callout-note} \# \[C\] Using your simulated posterior samples, calculate a 95% credible interval for $\beta$
+
+```{r}
+# Calculate the 95% posterior credible interval for b
+ci_95 <- quantile(beta_samples, probs = c(0.025, 0.975))
+ci_95
+hist(beta_samples, 
+     breaks = 50, 
+     main = expression("95% posterior credible interval for " * beta), 
+     xlab = expression(beta), 
+     col = "lightblue", 
+     border = "black")
+abline(v = ci_95, col = "red", lwd = 2, lty = 2)
+```
+
+:::

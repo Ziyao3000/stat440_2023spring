@@ -1,0 +1,92 @@
+---
+title: "Homework 17"
+author: "Ziyao Yang"
+date: "March, 31, 2023"
+format: pdf
+geometry: 
+  - top=30mm
+  - left=20mm
+editor: visual
+---
+
+# \[A\] Calculate E\[X1X2\].
+
+```{r}
+M <- matrix(c(0.2,0.1,0.3,0.3,0.05,0.05), nrow = 2, byrow = TRUE)
+X1 <- c(1, 2)
+X2 <- c(1, 2, 3)
+EX1X2 <- sum(X1 %*% t(X2) * M)
+EX1X2
+```
+
+# \[A\] Calculate the conditional distributions of X1 \| X2 and X2 \| X1
+
+```{r}
+# conditional distribution of X1 given X2
+PX1_given_X2 <- t(t(M) / colSums(M))
+PX1_given_X2
+# conditional distribution of X2 given X1
+PX2_given_X1 <- M / rowSums(M)
+PX2_given_X1
+
+cat("\n")
+
+#conditional distribution of X1 given X2
+for (i in 1:2) {
+  for (j in 1:3) {
+    cat(paste0("Pr(X1 = ", i, " | X2 = ", j, ") = ", M[i, j], " / ", colSums(M)[j], " = ", PX1_given_X2[i, j], "\n"))
+  }
+}
+
+cat("\n")
+
+#conditional distribution of X2 given X1
+for (i in 1:2) {
+  for (j in 1:3) {
+    cat(paste0("Pr(X2 = ", j, " | X1 = ", i, ") = ", M[i, j], " / ", rowSums(M)[i], " = ", PX2_given_X1[i, j], "\n"))
+  }
+}
+```
+
+# \[C\] Use Gibbs sampling to simulate a Markov Chain of length m = 10000 that starts at X1 = 1, X2 = 1 and evolves according to the conditional distributions of X1 \| X2 and X2 \| X1. Use set.seed(440) in your simulation.
+
+```{r}
+set.seed(440)
+m = 10000
+X1 = 1
+X2 = 1
+
+# initialize matrix to store Markov chain
+chain <- matrix(0, nrow = m, ncol = 2)
+chain[1, ] <- c(X1, X2)
+#Gibbs sampling with conditional distribution
+for (i in 2:m) {
+  # sample X1 given X2
+  X1 <- sample(1:2, size = 1, prob = PX1_given_X2[,X2])
+  
+  # sample X2 given X1
+  X2 <- sample(1:3, size = 1, prob = PX2_given_X1[X1,])
+  
+  # store current values in chain
+  chain[i, ] <- c(X1, X2)
+}
+```
+
+# \[C\] Estimate Pr(X1 = 2, X2 = 1) using your simulated Gibbs samples from the previous part, and then compare it with the theoretical value.
+
+```{r}
+# estimate Pr(X1 = 2, X2 = 1)
+count <- sum(chain[, 1] == 2 & chain[, 2] == 1)
+est_prob <- count / m
+cat(paste0("Estimated Pr(X1 = 2, X2 = 1) = ", est_prob, "\n"))
+cat(paste0("Theoretical Pr(X1 = 2, X2 = 1) = ", M[2,1], "\n"))
+```
+
+# \[C\] Estimate E\[X1X2\] using your simulated Gibbs samples from the previous part, and then compare it with the theoretical value.
+
+```{r}
+# estimate E[X1X2]
+est_EX1X2 <- mean(chain[, 1] * chain[, 2])
+cat(paste0("Estimated E[X1X2] = ", est_EX1X2, "\n"))
+cat(paste0("Theoretical E[X1X2] = ", EX1X2, "\n"))
+```

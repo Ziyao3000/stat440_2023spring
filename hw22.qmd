@@ -1,0 +1,112 @@
+---
+title: Homework 22
+author: Ziyao Yang
+date: April 21, 2023
+format: pdf
+header-includes:
+  - \usepackage{amsmath}
+output:
+  pdf_document: 
+  latex_engine: xelatex
+---
+  
+:::{.callout-note icon=false}
+# In this problem we illustrate how PCA can help improve linear regression through dimension reduction. Here we use data from https://howlongtobeat.com/, a website that tracks how long it takes to complete different story-based video games. Please use the dataset video_game_lengths.csv.(on Canvas) In this data set, we have different video games with their review score (from 0 to 100) and how long it takes to complete the game. We consider games with two play styles (“main story” versus “complete”) and three different measures (“leisure”, “median”, and “rushed”) for players who complete the game slowly, normally, or quickly. This gives us 6 different measures of how long it takes to complete the video game.
+:::
+```{r}
+library(dplyr)
+df <- read.csv("video_game_lengths.csv")
+```
+:::{.callout-note icon=false}
+# [C] Compute the pairwise correlations among the following 6 play length variables from the video_game_lengths.csv dataset. Read the documentation of pairs function and then use this function to create a matrix of pairwise scatter plots for the following 6 variables. Describe the patterns you observed in the pairwise correlations and scatter plots.
+"MainStoryLeisure" "MainStoryMedian" "MainStoryRushed" "CompleteLeisure" "CompleteMedian" "CompleteRushed"
+:::
+```{r}
+# Compute pairwise correlations
+correlations <- cor(df[,4:9])
+print(correlations)
+
+# Create a matrix of pairwise scatter plots
+pairs(df[,4:9])
+```
+* Many variables has very strong correlations with other variables
+
+:::{.callout-note icon=false}
+# [C] Use the lm function to build a linear regression model that can predict ReviewScore from the 6 play length variables listed above. Show the regression output table.
+:::
+```{r}
+lm <- lm(ReviewScore ~ . -Title - Year, df)
+summary(lm)
+```
+
+:::{.callout-note icon=false}
+# [C] Use the svd function to perform PCA on the data matrix formed by the 6 play length variables listed above. Plot the proportion of total variation explained by PCs as a function of the number of PCs. Compute the proportion of total variation explained by the first two PCs.
+:::
+```{r}
+# MainStoryLeisure + MainStoryMedian + MainStoryRushed + CompleteLeisure + CompleteMedian + CompleteRushed
+x_svd <- svd(df[,4:9])
+x_svd$d
+sum(x_svd$d)
+```
+```{r}
+library(ggplot2)
+# plot reduction in variance curve
+ggplot(
+data=data.frame(
+n_pc=0:6,
+pcvar=c(0,
+cumsum(x_svd$d^2) /
+sum(x_svd$d^2))
+),
+mapping=aes(n_pc, pcvar)
+) +
+geom_line(color="blue", group=1) +
+geom_point() +
+xlab("Number of principal components") +
+ylab("Percent of explained variance")
+```
+```{r}
+(x_svd$d[1] + x_svd$d[2])/sum(x_svd$d)
+```
+
+
+:::{.callout-note icon=false}
+# [C] Repeat the previous part by using the prcomp function. Compare the results with those from the previous part.
+:::
+```{r}
+x_prcomp <-  prcomp(df[,4:9])
+summary(x_prcomp)
+ggplot(
+data=data.frame(
+n_pc=0:6,
+pcvar=c(0,
+cumsum(x_prcomp$sdev**2) /
+sum(x_prcomp$sdev**2))
+),
+mapping=aes(n_pc, pcvar)
+) +
+geom_line(color="blue", group=1) +
+geom_point() +
+xlab("Number of principal components") +
+ylab("Percent of explained variance")
+```
+```{r}
+(x_prcomp$sdev[1] + x_prcomp$sdev[2]) / sum(x_prcomp$sdev)
+```
+
+:::{.callout-note icon=false}
+# [C] Use the lm function to build a linear regression model that can predict ReviewScore from the first two PCs. Show the regression output table.
+:::
+```{r}
+# add new columns to data.frame with principal component projections
+df = cbind(
+df,
+as.matrix(df[, 4:9]) %*% as.matrix(x_prcomp$rotation)
+)
+# fit model using PC projections as predictors
+summary(
+lm(ReviewScore ~ PC1 + PC2,
+data=df)
+)
+```
+

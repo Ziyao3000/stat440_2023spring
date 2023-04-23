@@ -1,0 +1,140 @@
+---
+title: "Homework 20"
+author: "Ziyao Yang"
+date: "April, 11, 2023"
+format: pdf
+geometry: 
+  - top=30mm
+  - left=20mm
+editor: visual
+---
+
+# Consider the density function of the following mixture model:
+
+# $f (x) = π1 · \beta(x; 3, 15) + π2 · \beta(x; 12, 12) + π3 · \beta(x; 15, 3)$
+
+# where above, $β(x; a, b)$ is the density of the Beta distribution with parameters a and b. Please use the dataset `beta_mix.csv` (on Canvas) observed in this mixture model.
+
+```{r}
+rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
+gc() #free up memrory and report the memory usage.
+library(readr)
+beta_mix <- read_csv("beta_mix.csv")
+```
+
+```{r}
+f <-  function(x,pi1, pi2, pi3){
+  pi1 * dbeta(x, 3, 15) + pi2 * dbeta(x, 12, 12) + pi3 * dbeta(x, 15, 3)
+}
+```
+
+# \[A\] Mimic the arguments in our lecture notes and derive the EM algorithm to estimate the unknown parameters $(π1, π2, π3)$.
+
+# \[C\] Implement the EM algorithm above with initial values (π1 = 1/4, π2 = 1/2, π3 = 1/4). Plot the log-likelihood as a function of iteration.
+
+```{r}
+# Load the required library
+library(stats4)
+
+# Function to compute the log-likelihood
+mix_loglik <- function(pi1, pi2, pi3, data) {
+  sum(log(f(data, pi1, pi2, pi3)))
+}
+
+# EM Algorithm implementation
+EM_algorithm <- function(data, pi1_init, pi2_init, pi3_init, max_iter = 1000, tol = 1e-6) {
+  pi1 <- pi1_init
+  pi2 <- pi2_init
+  pi3 <- pi3_init
+  
+  loglik_history <- numeric(max_iter)
+  loglik_history[1] <- mix_loglik(pi1, pi2, pi3, data)
+  
+  for (iter in 2:max_iter) {
+    # E-step: Compute the responsibilities
+    resp1 <- pi1 * dbeta(data, 3, 15)
+    resp2 <- pi2 * dbeta(data, 12, 12)
+    resp3 <- pi3 * dbeta(data, 15, 3)
+    resp_sum <- resp1 + resp2 + resp3
+    
+    resp1 <- resp1 / resp_sum
+    resp2 <- resp2 / resp_sum
+    resp3 <- resp3 / resp_sum
+    
+    # M-step: Update the mixture coefficients
+    N <- length(data)
+    pi1 <- sum(resp1) / N
+    pi2 <- sum(resp2) / N
+    pi3 <- sum(resp3) / N
+    
+    # Compute the log-likelihood
+    loglik_history[iter] <- mix_loglik(pi1, pi2, pi3, data)
+    
+    # Check for convergence
+    if (abs(loglik_history[iter] - loglik_history[iter - 1]) < tol) {
+      break
+    }
+  }
+  
+  return(list(pi1 = pi1, pi2 = pi2, pi3 = pi3, loglik_history = loglik_history[1:iter]))
+}
+
+# Implement the EM algorithm with initial values (π1 = 1/4, π2 = 1/2, π3 = 1/4)
+result <- EM_algorithm(beta_mix$x, pi1_init = 1/4, pi2_init = 1/2, pi3_init = 1/4)
+result$loglik_history
+# Plot the log-likelihood as a function of iteration
+plot(result$loglik_history, type = "l", main = "Log-Likelihood", xlab = "Iteration", ylab = "Log-Likelihood", col = "blue")
+
+```
+
+```{r}
+# Load libraries
+library(ggplot2)
+library(readr)
+
+# Load dataset
+beta_mix <- read_csv("beta_mix.csv")
+x <- beta_mix$x
+
+# EM Algorithm
+em_algorithm <- function(x, pi, alpha, beta_params, max_iter = 100, tol = 1e-6) {
+  N <- length(x)
+  log_likelihoods <- c()
+  
+  for (i in 1:max_iter) {
+    # E-step
+    w <- matrix(0, nrow = N, ncol = 3)
+    for (j in 1:3) {
+      w[, j] <- pi[j] * dbeta(x, shape1 = alpha[j], shape2 = beta_params[j])
+    }
+    w <- w / rowSums(w)
+    
+    # M-step
+    n_j <- colSums(w)
+    pi <- n_j / N
+    
+    # Compute log-likelihood
+    log_likelihood <- sum(log(rowSums(w * pi)))
+    log_likelihoods <- c(log_likelihoods, log_likelihood)
+    
+    # Check for convergence
+    if (length(log_likelihoods) > 1 && abs(log_likelihoods[length(log_likelihoods)] - log_likelihoods[length(log_likelihoods) - 1]) < tol) {
+      break
+    }
+  }
+  return(list(pi = pi, log_likelihoods = log_likelihoods))
+}
+
+# Run EM algorithm
+pi_init <- c(1/4, 1/2, 1/4)
+alpha <- c(3, 12, 15)
+beta_params <- c(15, 12, 3)
+em_result <- em_algorithm(x, pi_init, alpha, beta_params)
+
+# Plot log-likelihood as a function of iteration
+df <- data.frame(iteration = 1:length(em_result$log_likelihoods), log_likelihood = em_result$log_likelihoods)
+ggplot(df, aes(x = iteration, y = log_likelihood)) +
+  geom_line() +
+  labs(title = "Log-Likelihood vs. Iteration", x = "Iteration", y = "Log-Likelihood") +
+  theme_minimal()
+```

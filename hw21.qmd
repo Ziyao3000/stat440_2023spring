@@ -1,0 +1,119 @@
+---
+title: Homework 21
+author: Ziyao Yang
+date: April 21, 2023
+format: pdf
+header-includes:
+  - \usepackage{amsmath}
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+Consider the following covariance matrix:
+
+$$
+{\Sigma} = \begin{bmatrix}
+6 & -3 \\
+-3 & 4
+\end{bmatrix}
+$$
+
+:::{.callout-note icon=false}
+# (A) Find the SVD of ${\Sigma}$ by hand and show all steps of your derivation.
+:::
+
+```{r}
+# Define the covariance matrix
+Sigma <- matrix(c(6, -3, -3, 4), nrow = 2)
+Sigma
+
+# Calculate Sigma * Sigma^T
+Sigma %*% t(Sigma)
+```
+```{r}
+# Compute the eigenvalues of Sigma
+lambda1 <- 5*(7 + 2 * sqrt(10))
+lambda2 <- 5*(7 - 2 * sqrt(10))
+
+# Print the eigenvalues
+cat("The eigenvalues of Sigma are", lambda1, "and", lambda2, "\n")
+```
+```{r}
+# Compute the eigenvectors corresponding to lambda1
+x11 <- 1
+x12 <- (45 - lambda1) /30
+v1_norm = sqrt(x11^2 + x12^2)
+v11 <- x11/v1_norm
+v12 <- x12/v1_norm
+
+# Print the eigenvector corresponding to lambda1
+cat("The eigenvector corresponding to lambda1 is [", v11, v12, "]\n")
+```
+```{r}
+# Compute the eigenvectors corresponding to lambda2
+x21 <- 1
+x22 <- (45 - lambda2) /30
+v2_norm = sqrt(x21^2 + x22^2)
+v21 <- x21/v2_norm
+v22 <- x22/v2_norm
+# Print the eigenvector corresponding to lambda2
+cat("The eigenvector corresponding to lambda2 is [", v21, v22, "]\n")
+```
+```{r}
+# Construct the matrix V using the eigenvectors
+V <- matrix(c(v11, v21, v12, v22), nrow = 2, byrow = TRUE)
+V
+```
+```{r}
+# Calculate singular values
+d <- matrix(c(sqrt(lambda1),0, 0, sqrt(lambda2)),nrow = 2 )
+d
+```
+
+```{r}
+# Calculate U
+u <- Sigma %*% V %*% solve(d)
+u
+```
+
+```{r}
+# check
+u %*% d %*% t(V)
+```
+
+:::{.callout-note icon=false}
+# (C) Write R codes to verify the SVD of ${\Sigma}$.
+:::
+
+```{r}
+# Verify the SVD of Sigma using the svd function
+Sigma_svd <- svd(Sigma)
+Sigma_svd
+```
+
+```{r}
+U <- Sigma_svd$u
+D <- diag(Sigma_svd$d)
+V <- Sigma_svd$v
+U %*% D %*% t(V)
+```
+
+:::{.callout-note icon=false}
+# (A) Use the SVD of ${\Sigma}$ to find ${\Sigma}^{-1}$ by hand and show all steps of your derivation.
+:::
+
+```{r}
+solve(d)
+t(U)
+V %*% solve(d) %*% t(U)
+```
+
+:::{.callout-note icon=false}
+# (C) Write R codes to verify ${\Sigma}^{-1}$.
+:::
+
+```{r}
+solve(Sigma)
+```
+
